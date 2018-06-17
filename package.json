@@ -3,20 +3,27 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "node_modules/.bin/babel-node index.js",
-    "build": "node_modules/.bin/babel index.js -d bin/",
+    "start": "neon build && npx babel-node index.js",
+    "build": "neon build && npx babel index.js -d bin/",
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
   },
   "dependencies": {
-    "proton-native": "latest"
+    "proton-native": "latest",
+    "react-redux": "^5.0.7",
+    "redux": "^4.0.0",
+    "redux-logger": "^3.0.6",
+    "redux-observable": "^1.0.0-beta.2",
+    "rxjs": "^6.2.1",
+    "rxjs-compat": "^6.2.1"
   },
   "devDependencies": {
-    "electron-builder": "latest",
     "babel-cli": "latest",
     "babel-preset-env": "latest",
+    "babel-preset-react": "latest",
     "babel-preset-stage-0": "latest",
-    "babel-preset-react": "latest"
+    "electron-builder": "latest",
+    "redux-devtools": "^3.4.1"
   },
   "build": {
     "protonNodeVersion": "current",

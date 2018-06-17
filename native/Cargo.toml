@@ -1,0 +1,16 @@
+[package]
+name = "neontest"
+version = "0.1.0"
+authors = ["Aleksey Krasnobaev <alekseykrasnobaev@gmail.com>"]
+license = "MIT"
+build = "build.rs"
+
+[lib]
+name = "neontest"
+crate-type = ["dylib"]
+
+[build-dependencies]
+neon-build = "0.1.23"
+
+[dependencies]
+neon = "0.1.23"

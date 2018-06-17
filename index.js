@@ -1,17 +1,22 @@
-import React, { Component } from 'react'; // import from react
+import React, { Component } from 'react';
+import { Provider } from 'react-redux';
+import { render, Window, App } from 'proton-native';
 
-import { render, Window, App } from 'proton-native'; // import the proton-native components
+import { configureStore } from './src/modulemain/ducks/store.js';
+import VSTHostApp from './src/modulemain/components/VSTHostApp';
 
-class Example extends Component {
-  render() { // all Components must have a render method
+class ProtonMain extends Component {
+  render() {
     return (
-      <App> // you must always include App around everything
-        <Window title="Proton Native Rocks!" size={{w: 300, h: 300}} menuBar={false}>
-            {/* all your other components go here*/}
-        </Window>
-      </App>
+      <Provider store={configureStore()}>
+        <App>
+          <Window title="VST host" size={{w: 300, h: 300}} menuBar={false}>
+            <VSTHostApp />
+          </Window>
+        </App>
+      </Provider>
     );
   }
 }
 
-render(<Example />); // and finally render your main component
+render(<ProtonMain />);

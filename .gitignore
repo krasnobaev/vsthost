@@ -1,3 +1,5 @@
 /node_modules
 /dist
 /bin
+/native/target
+/native/index.node
