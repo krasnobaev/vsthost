@@ -23,6 +23,7 @@
     "babel-preset-react": "latest",
     "babel-preset-stage-0": "latest",
     "electron-builder": "latest",
+    "neon-cli": "^0.1.23",
     "redux-devtools": "^3.4.1"
   },
   "build": {

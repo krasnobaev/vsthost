@@ -14,3 +14,4 @@ neon-build = "0.1.23"
 
 [dependencies]
 neon = "0.1.23"
+vst = { git = "https://github.com/rust-dsp/rust-vst" }
