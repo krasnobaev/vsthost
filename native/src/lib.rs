@@ -2,8 +2,9 @@
 extern crate neon;
 extern crate vst;
 
-use neon::vm::{Call, JsResult};
+use neon::mem::Handle;
 use neon::js::JsString;
+use neon::vm::{Call, JsResult};
 
 use std::sync::{Arc, Mutex};
 use std::path::Path;
@@ -11,16 +12,6 @@ use std::error::Error;
 
 use vst::host::{Host, PluginLoader};
 use vst::plugin::Plugin;
-
-/* hello world */
-
-/**
- * send hello world message
- */
-fn hello(call: Call) -> JsResult<JsString> {
-    let scope = call.scope;
-    Ok(JsString::new(scope, "hello from node").unwrap())
-}
 
 /* VST plugin load */
 
@@ -37,10 +28,12 @@ impl Host for SampleHost {
  * load plugin and show info
  */
 fn vstpluginfo(call: Call) -> JsResult<JsString> {
-  let scope = call.scope;
-  let path = Path::new(
-    "/Library/Audio/Plug-Ins/VST/Replika.vst/Contents/MacOS/Replika"
-  );
+  // let scope = call.scope;
+  // call.check_argument::<JsString>(0)?;
+  // let filename = call.arguments.require(scope, 0)?.check::<JsString>()?.value();
+  let __filename: Handle<JsString> = call.arguments.require(call.scope, 0)?.check::<JsString>()?;
+  let filename = String::from(__filename.value());
+  let path = Path::new(&filename);
 
   // Create the host
   let host = Arc::new(Mutex::new(SampleHost));
@@ -81,16 +74,25 @@ fn vstpluginfo(call: Call) -> JsResult<JsString> {
   instance.init();
   println!("Initialized instance!");
 
-  println!("Closing instance...");
+  // println!("Closing instance...");
   // Close the instance. This is not necessary as the instance is shut down when
   // it is dropped as it goes out of scope.
   // drop(instance);
 
-  Ok(JsString::new(scope, &plugininfo).unwrap())
+  Ok(JsString::new(call.scope, &plugininfo).unwrap())
 }
 
+// trait CheckArgument<'a> {
+//   fn check_argument<V: Value>(&mut self, i: i32) -> JsResult<'a, V>;
+// }
+//
+// impl<'a, T: This> CheckArgument<'a> for FunctionCall<'a, T> {
+//   fn check_argument<V: Value>(&mut self, i: i32) -> JsResult<'a, V> {
+//     self.arguments.require(self.scope, i)?.check::<V>()
+//   }
+// }
+
 register_module!(m, {
-    m.export("hello", hello)?;
     m.export("vstpluginfo", vstpluginfo)?;
     Ok(())
 });
