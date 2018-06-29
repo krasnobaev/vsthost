@@ -6,12 +6,14 @@ use neon::mem::Handle;
 use neon::js::JsString;
 use neon::vm::{Call, JsResult};
 
-use std::sync::{Arc, Mutex};
-use std::path::Path;
 use std::error::Error;
+use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 use vst::host::{Host, PluginLoader};
 use vst::plugin::Plugin;
+
+extern crate cpal;
 
 /* VST plugin load */
 
@@ -92,7 +94,59 @@ fn vstpluginfo(call: Call) -> JsResult<JsString> {
 //   }
 // }
 
+fn listAudioDevices(call: Call) -> JsResult<JsString> {
+  let line1 = format!("Default Input Device:\n  {:?}", cpal::default_input_device().map(|e| e.name()));
+  let line2 = format!("Default Output Device:\n  {:?}", cpal::default_output_device().map(|e| e.name()));
+
+  let devices = cpal::devices();
+  let line3 = format!("Devices: ");
+  let mut line4forloop = String::new();
+  for (device_index, device) in devices.enumerate() {
+    line4forloop = format!("{}\n{}. \"{}\"", line4forloop, device_index + 1, device.name());
+
+    // Input formats
+    if let Ok(fmt) = device.default_input_format() {
+      line4forloop = format!("{}\n  Default input stream format:\n    {:?}", line4forloop, fmt);
+    }
+    let mut input_formats = match device.supported_input_formats() {
+      Ok(f) => f.peekable(),
+      Err(e) => {
+        line4forloop = format!("{}\nError: {:?}", line4forloop, e);
+        continue;
+      },
+    };
+    if input_formats.peek().is_some() {
+      line4forloop = format!("{}\n  All supported input stream formats:", line4forloop);
+      for (format_index, format) in input_formats.enumerate() {
+        line4forloop = format!("{}\n    {}.{}. {:?}", line4forloop, device_index + 1, format_index + 1, format);
+      }
+    }
+
+    // Output formats
+    if let Ok(fmt) = device.default_output_format() {
+      line4forloop = format!("{}\n  Default output stream format:\n    {:?}", line4forloop, fmt);
+    }
+    let mut output_formats = match device.supported_output_formats() {
+      Ok(f) => f.peekable(),
+      Err(e) => {
+        line4forloop = format!("{}\nError: {:?}", line4forloop, e);
+        continue;
+      },
+    };
+    if output_formats.peek().is_some() {
+      line4forloop = format!("{}\n  All supported output stream formats:", line4forloop);
+      for (format_index, format) in output_formats.enumerate() {
+        line4forloop = format!("{}\n    {}.{}. {:?}", line4forloop, device_index + 1, format_index + 1, format);
+      }
+    }
+  }
+
+  let res = format!("{}\n{}\n{}{}", line1, line2, line3, line4forloop);
+  Ok(JsString::new(call.scope, &res).unwrap())
+}
+
 register_module!(m, {
-    m.export("vstpluginfo", vstpluginfo)?;
-    Ok(())
+  m.export("listAudioDevices", listAudioDevices)?;
+  m.export("vstpluginfo", vstpluginfo)?;
+  Ok(())
 });

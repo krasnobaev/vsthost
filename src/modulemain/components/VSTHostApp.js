@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Box, Button, Dialog, Text } from 'proton-native';
+import { Box, Button, Dialog, Tab, Text, TextInput } from 'proton-native';
 var addon = require('../../../native');
 
 const _initplug = '/Library/Audio/Plug-Ins/VST/Replika.vst/Contents/MacOS/Replika';
@@ -28,7 +28,15 @@ class VSTHostApp extends Component {
     return (
       <Box padded>
         <Button stretchy={false} onClick={() => this.open()}>Open VST</Button>
-        <Text stretchy={false}>{this.state.pluginfo}</Text>
+        <Text>{this.state.pluginfo}</Text>
+        <Tab>
+          <Box label="Tab1" padded>
+            <TextInput />
+          </Box>
+          <Box label="Tab2">
+            <TextInput multiline>{addon.listAudioDevices()}</TextInput>
+          </Box>
+        </Tab>
       </Box>
     );
   }
