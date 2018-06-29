@@ -11,6 +11,7 @@ class VSTHostApp extends Component {
     this.state = {
       curplug: _initplug,
       pluginfo: addon.vstpluginfo(_initplug),
+      beepIsStopped: false,
     };
   }
 
@@ -24,10 +25,20 @@ class VSTHostApp extends Component {
     }
   }
 
+  beep() {
+    addon.beep(!this.state.beepIsStopped);
+
+    this.setState({
+      ...this.state,
+      beepIsStopped: !this.state.beepIsStopped,
+    });
+  }
+
   render() {
     return (
       <Box padded>
-        <Button stretchy={false} onClick={() => this.open()}>Open VST</Button>
+      <Button stretchy={false} onClick={() => this.open()}>Open VST</Button>
+      <Button stretchy={false} onClick={() => this.beep()}>Beep</Button>
         <Text>{this.state.pluginfo}</Text>
         <Tab>
           <Box label="Tab1" padded>

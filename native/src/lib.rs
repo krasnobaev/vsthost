@@ -3,12 +3,13 @@ extern crate neon;
 extern crate vst;
 
 use neon::mem::Handle;
-use neon::js::JsString;
+use neon::js::{JsBoolean, JsString};
 use neon::vm::{Call, JsResult};
 
 use std::error::Error;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::thread;
 
 use vst::host::{Host, PluginLoader};
 use vst::plugin::Plugin;
@@ -84,16 +85,6 @@ fn vstpluginfo(call: Call) -> JsResult<JsString> {
   Ok(JsString::new(call.scope, &plugininfo).unwrap())
 }
 
-// trait CheckArgument<'a> {
-//   fn check_argument<V: Value>(&mut self, i: i32) -> JsResult<'a, V>;
-// }
-//
-// impl<'a, T: This> CheckArgument<'a> for FunctionCall<'a, T> {
-//   fn check_argument<V: Value>(&mut self, i: i32) -> JsResult<'a, V> {
-//     self.arguments.require(self.scope, i)?.check::<V>()
-//   }
-// }
-
 fn listAudioDevices(call: Call) -> JsResult<JsString> {
   let line1 = format!("Default Input Device:\n  {:?}", cpal::default_input_device().map(|e| e.name()));
   let line2 = format!("Default Output Device:\n  {:?}", cpal::default_output_device().map(|e| e.name()));
@@ -145,7 +136,63 @@ fn listAudioDevices(call: Call) -> JsResult<JsString> {
   Ok(JsString::new(call.scope, &res).unwrap())
 }
 
+fn beep(call: Call) -> JsResult<JsString> {
+  let isrun: Handle<JsBoolean> = call.arguments.require(call.scope, 0)?.check::<JsBoolean>()?;
+
+  if isrun.value() {
+    thread::spawn(|| {
+      let device = cpal::default_output_device().expect("Failed to get default output device");
+      let format = device.default_output_format().expect("Failed to get default output format");
+      let event_loop = cpal::EventLoop::new();
+      let stream_id = event_loop.build_output_stream(&device, &format).unwrap();
+      event_loop.play_stream(stream_id.clone());
+
+      let sample_rate = format.sample_rate.0 as f32;
+      let mut sample_clock = 0f32;
+
+      // Produce a sinusoid of maximum amplitude.
+      let mut next_value = || {
+        sample_clock = (sample_clock + 1.0) % sample_rate;
+        (sample_clock * 440.0 * 2.0 * 3.141592 / sample_rate).sin()
+      };
+
+      event_loop.run(move |_, data| {
+        match data {
+          cpal::StreamData::Output { buffer: cpal::UnknownTypeOutputBuffer::U16(mut buffer) } => {
+            for sample in buffer.chunks_mut(format.channels as usize) {
+              let value = ((next_value() * 0.5 + 0.5) * std::u16::MAX as f32) as u16;
+              for out in sample.iter_mut() {
+                *out = value;
+              }
+            }
+          },
+          cpal::StreamData::Output { buffer: cpal::UnknownTypeOutputBuffer::I16(mut buffer) } => {
+            for sample in buffer.chunks_mut(format.channels as usize) {
+              let value = (next_value() * std::i16::MAX as f32) as i16;
+              for out in sample.iter_mut() {
+                *out = value;
+              }
+            }
+          },
+          cpal::StreamData::Output { buffer: cpal::UnknownTypeOutputBuffer::F32(mut buffer) } => {
+            for sample in buffer.chunks_mut(format.channels as usize) {
+              let value = next_value();
+              for out in sample.iter_mut() {
+                *out = value;
+              }
+            }
+          },
+          _ => (),
+        }
+      });
+    });
+  }
+
+  Ok(JsString::new(call.scope, "").unwrap())
+}
+
 register_module!(m, {
+  m.export("beep", beep)?;
   m.export("listAudioDevices", listAudioDevices)?;
   m.export("vstpluginfo", vstpluginfo)?;
   Ok(())
