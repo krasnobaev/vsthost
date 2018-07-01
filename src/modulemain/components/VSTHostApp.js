@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { Box, Button, Dialog, Tab, Text, TextInput } from 'proton-native';
 var addon = require('../../../native');
+let vsthost = addon.get_vsthost_instance();
 
 const _initplug = '/Library/Audio/Plug-Ins/VST/Replika.vst/Contents/MacOS/Replika';
 
@@ -8,9 +9,11 @@ class VSTHostApp extends Component {
   constructor(props) {
     super(props);
 
+    vsthost.loadvstplugin(_initplug);
+
     this.state = {
       curplug: _initplug,
-      pluginfo: addon.vstpluginfo(_initplug),
+      pluginfo: vsthost.vstpluginfo(0),
       beepIsStopped: false,
     };
   }
@@ -18,11 +21,20 @@ class VSTHostApp extends Component {
   open() {
     const filename = Dialog('Open') || '';
     if (filename.match(/.vst\/Contents\/MacOS\//)) {
+      vsthost.loadvstplugin(filename);
+
       this.setState({
         curplug: filename,
-        pluginfo: addon.vstpluginfo(filename),
+        pluginfo: vsthost.vstpluginfo(0),
       });
     }
+  }
+
+  refresh(ind) {
+    this.setState({
+      ...this.state,
+      pluginfo: vsthost.vstpluginfo(ind),
+    });
   }
 
   beep() {
@@ -39,6 +51,8 @@ class VSTHostApp extends Component {
       <Box padded>
       <Button stretchy={false} onClick={() => this.open()}>Open VST</Button>
       <Button stretchy={false} onClick={() => this.beep()}>Beep</Button>
+      <Button stretchy={false} onClick={() => this.refresh(0)}>Refresh 0</Button>
+      <Button stretchy={false} onClick={() => this.refresh(1)}>Refresh 1</Button>
         <Text>{this.state.pluginfo}</Text>
         <Tab>
           <Box label="Tab1" padded>

@@ -1,89 +1,19 @@
 #[macro_use]
 extern crate neon;
+extern crate cpal;
 extern crate vst;
 
-use neon::mem::Handle;
-use neon::js::{JsBoolean, JsString};
-use neon::vm::{Call, JsResult};
-
-use std::error::Error;
-use std::path::Path;
+use std::os::raw::c_void;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use vst::host::{Host, PluginLoader};
-use vst::plugin::Plugin;
+use neon::mem::Handle;
+use neon::js::{Object, JsBoolean, JsFunction, JsString, JsObject, JsInteger};
+use neon::vm::{Call, JsResult};
 
-extern crate cpal;
+mod vsthost;
 
-/* VST plugin load */
-
-#[allow(dead_code)]
-struct SampleHost;
-
-impl Host for SampleHost {
-  fn automate(&mut self, index: i32, value: f32) {
-    println!("Parameter {} had its value changed to {}", index, value);
-  }
-}
-
-/**
- * load plugin and show info
- */
-fn vstpluginfo(call: Call) -> JsResult<JsString> {
-  // let scope = call.scope;
-  // call.check_argument::<JsString>(0)?;
-  // let filename = call.arguments.require(scope, 0)?.check::<JsString>()?.value();
-  let __filename: Handle<JsString> = call.arguments.require(call.scope, 0)?.check::<JsString>()?;
-  let filename = String::from(__filename.value());
-  let path = Path::new(&filename);
-
-  // Create the host
-  let host = Arc::new(Mutex::new(SampleHost));
-
-  println!("Loading {}...", path.to_str().unwrap());
-
-  // Load the plugin
-  let mut loader = PluginLoader::load(path, Arc::clone(&host)).unwrap_or_else(
-    |e| {
-        panic!("Failed to load plugin: {}", e.description())
-    },
-  );
-
-  // Create an instance of the plugin
-  let mut instance = loader.instance().unwrap();
-
-  // Get the plugin information
-  let info = instance.get_info();
-
-  let plugininfo = format!(
-      "Loaded '{}':\n\t\
-       Vendor: {}\n\t\
-       Presets: {}\n\t\
-       Parameters: {}\n\t\
-       VST ID: {}\n\t\
-       Version: {}\n\t\
-       Initial Delay: {} samples",
-      info.name,
-      info.vendor,
-      info.presets,
-      info.parameters,
-      info.unique_id,
-      info.version,
-      info.initial_delay
-  );
-
-  // Initialize the instance
-  instance.init();
-  println!("Initialized instance!");
-
-  // println!("Closing instance...");
-  // Close the instance. This is not necessary as the instance is shut down when
-  // it is dropped as it goes out of scope.
-  // drop(instance);
-
-  Ok(JsString::new(call.scope, &plugininfo).unwrap())
-}
+/* CPAL */
 
 fn listAudioDevices(call: Call) -> JsResult<JsString> {
   let line1 = format!("Default Input Device:\n  {:?}", cpal::default_input_device().map(|e| e.name()));
@@ -191,9 +121,56 @@ fn beep(call: Call) -> JsResult<JsString> {
   Ok(JsString::new(call.scope, "").unwrap())
 }
 
+/* VST */
+
+static mut LOAD_POINTER: *mut c_void = 0 as *mut c_void;
+// fn get_host() -> &'static mut vsthost::VSTHost {
+fn get_host() -> &'static Arc<Mutex<vsthost::VSTHost>> {
+  unsafe {
+    let host = LOAD_POINTER as *const Arc<Mutex<vsthost::VSTHost>>;
+    let host = &*host;
+    host
+    // let mut host = &mut *host.lock().unwrap();
+    // &mut *host.lock().unwrap()
+  }
+}
+
+fn get_vsthost_instance(call: Call) -> JsResult<JsObject> {
+  let vst_api = JsObject::new(call.scope);
+
+  unsafe {
+    let __vst_host = Arc::new(Mutex::new(vsthost::VSTHost::new()));
+    LOAD_POINTER = Box::into_raw(Box::new(Arc::clone(&__vst_host))) as *mut c_void;
+  }
+
+  fn loadvstplugin(call: Call) -> JsResult<JsInteger> {
+    let __filename: Handle<JsString> = call.arguments.require(call.scope, 0)?.check::<JsString>()?;
+    let filename = String::from(__filename.value());
+
+    let index = get_host().lock().unwrap().loadvstplugin(filename) as i32;
+    Ok(JsInteger::new(call.scope, index))
+  }
+
+  fn vstpluginfo(call: Call) -> JsResult<JsString> {
+    let __index: Handle<JsInteger> = call.arguments.require(call.scope, 0)?.check::<JsInteger>()?;
+    let index = __index.value() as usize;
+
+    let info = get_host().lock().unwrap().vstpluginfo(index);
+    Ok(JsString::new(call.scope, &info).unwrap())
+  }
+
+  let _loadvstplugin = JsFunction::new(call.scope, loadvstplugin);
+  let _vstpluginfo   = JsFunction::new(call.scope, vstpluginfo);
+
+  vst_api.set("loadvstplugin", _loadvstplugin.unwrap());
+  vst_api.set("vstpluginfo", _vstpluginfo.unwrap());
+
+  Ok(vst_api)
+}
+
 register_module!(m, {
-  m.export("beep", beep)?;
   m.export("listAudioDevices", listAudioDevices)?;
-  m.export("vstpluginfo", vstpluginfo)?;
+  m.export("beep", beep)?;
+  m.export("get_vsthost_instance", get_vsthost_instance)?;
   Ok(())
 });
