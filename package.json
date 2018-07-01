@@ -7,7 +7,8 @@
     "startdbg": "neon build -d && npx babel-node index.js",
     "build": "neon build && npx babel index.js -d bin/",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "clean": "rm -rf bin dist native/{target,artifacts.json,index.node}"
   },
   "dependencies": {
     "proton-native": "^1.1.8",
