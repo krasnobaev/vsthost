@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "start": "neon build && npx babel-node index.js",
+    "startdbg": "neon build -d && npx babel-node index.js",
     "build": "neon build && npx babel index.js -d bin/",
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
   },
   "dependencies": {
-    "proton-native": "latest",
+    "proton-native": "^1.1.8",
     "react-redux": "^5.0.7",
     "redux": "^4.0.0",
     "redux-logger": "^3.0.6",
