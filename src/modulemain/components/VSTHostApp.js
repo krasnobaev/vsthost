@@ -13,6 +13,11 @@ class VSTHostApp extends Component {
 
     this.state = {
       curplug: _initplug,
+      plugins: new Array({
+        index: 0,
+        filename: _initplug,
+        info: vsthost.vstpluginfo(0),
+      }),
       pluginfo: vsthost.vstpluginfo(0),
       beepIsStopped: false,
     };
@@ -21,20 +26,20 @@ class VSTHostApp extends Component {
   open() {
     const filename = Dialog('Open') || '';
     if (filename.match(/.vst\/Contents\/MacOS\//)) {
-      vsthost.loadvstplugin(filename);
+      const index = vsthost.loadvstplugin(filename) - 1;
 
       this.setState({
         curplug: filename,
-        pluginfo: vsthost.vstpluginfo(0),
+        pluginfo: vsthost.vstpluginfo(index),
+        plugins: [
+          ...this.state.plugins, {
+            index,
+            filename,
+            info: vsthost.vstpluginfo(index),
+          }
+        ]
       });
     }
-  }
-
-  refresh(ind) {
-    this.setState({
-      ...this.state,
-      pluginfo: vsthost.vstpluginfo(ind),
-    });
   }
 
   beep() {
@@ -46,19 +51,28 @@ class VSTHostApp extends Component {
     });
   }
 
+  PlugList() {
+    const plugins = this.state.plugins.map((plug, i) =>
+      <Box label={`plug${i}`} padded>
+        <TextInput multiline>{`filename: ${plug.filename}\n${plug.info}`}</TextInput>
+      </Box>
+    );
+
+    return (
+      <Tab>{plugins}</Tab>
+    );
+  }
+
   render() {
     return (
       <Box padded>
-      <Button stretchy={false} onClick={() => this.open()}>Open VST</Button>
-      <Button stretchy={false} onClick={() => this.beep()}>Beep</Button>
-      <Button stretchy={false} onClick={() => this.refresh(0)}>Refresh 0</Button>
-      <Button stretchy={false} onClick={() => this.refresh(1)}>Refresh 1</Button>
-        <Text>{this.state.pluginfo}</Text>
+        <Button stretchy={false} onClick={() => this.open()}>Open VST</Button>
+        <Button stretchy={false} onClick={() => this.beep()}>Beep</Button>
+
+        {this.PlugList()}
+
         <Tab>
-          <Box label="Tab1" padded>
-            <TextInput />
-          </Box>
-          <Box label="Tab2">
+          <Box label="Audio Devices">
             <TextInput multiline>{addon.list_audio_devices()}</TextInput>
           </Box>
         </Tab>
