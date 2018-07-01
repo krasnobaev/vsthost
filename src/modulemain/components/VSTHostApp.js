@@ -59,7 +59,7 @@ class VSTHostApp extends Component {
             <TextInput />
           </Box>
           <Box label="Tab2">
-            <TextInput multiline>{addon.listAudioDevices()}</TextInput>
+            <TextInput multiline>{addon.list_audio_devices()}</TextInput>
           </Box>
         </Tab>
       </Box>

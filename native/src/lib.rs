@@ -15,7 +15,7 @@ mod vsthost;
 
 /* CPAL */
 
-fn listAudioDevices(call: Call) -> JsResult<JsString> {
+fn list_audio_devices(call: Call) -> JsResult<JsString> {
   let line1 = format!("Default Input Device:\n  {:?}", cpal::default_input_device().map(|e| e.name()));
   let line2 = format!("Default Output Device:\n  {:?}", cpal::default_output_device().map(|e| e.name()));
 
@@ -169,7 +169,7 @@ fn get_vsthost_instance(call: Call) -> JsResult<JsObject> {
 }
 
 register_module!(m, {
-  m.export("listAudioDevices", listAudioDevices)?;
+  m.export("list_audio_devices", list_audio_devices)?;
   m.export("beep", beep)?;
   m.export("get_vsthost_instance", get_vsthost_instance)?;
   Ok(())
