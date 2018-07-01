@@ -1,0 +1,8 @@
+root = true
+[*]
+end_of_line = lf
+
+# 2 space indentation
+[*.{rs,js}]
+indent_style = space
+indent_size = 2
